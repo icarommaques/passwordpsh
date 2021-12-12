@@ -1,5 +1,7 @@
 class Password < ApplicationRecord
   has_many :views, dependent: :destroy
+  has_many_attached :files
+  
   encrypts :payload, :note
 
   def to_param
@@ -32,6 +34,7 @@ class Password < ApplicationRecord
     self.payload = nil
     self.payload_legacy = nil
     self.expired_on = Time.now
+    self.files.purge
     save
   end
 
@@ -48,6 +51,13 @@ class Password < ApplicationRecord
 
     attr_hash['days_remaining'] = days_remaining
     attr_hash['views_remaining'] = views_remaining
+
+    file_list = {}
+    files.each do |file|
+      # FIXME: default host?
+      file_list[file.filename] = Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
+    end
+    attr_hash['files'] = file_list.to_json
 
     # Remove unnecessary fields
     attr_hash.delete('payload_ciphertext')
